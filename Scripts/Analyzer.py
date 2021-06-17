@@ -1,9 +1,10 @@
-#The core of the method
-#!{sys.executable} -m pip install -U selenium
 import selenium
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
-
+from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
+from selenium.common.exceptions import TimeoutException
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 
 #Other useful packages
 import sys
@@ -15,6 +16,10 @@ import datetime
 import pandas as pd
 import numpy as np
 
+#import DeckAnalyzer as DA
+
+
+
 
 class DeckAnalyzer:
     '''
@@ -24,31 +29,40 @@ class DeckAnalyzer:
     https://chromedriver.chromium.org/
     '''
     def __init__(self, driver_path, deck_code):
-        self.deck_code = deck_code
         self.driver = webdriver.Chrome(executable_path = driver_path)
-        self.driver.get(f'https://hsreplay.net/decks/{self.deck_code}/#gameType=RANKED_STANDARD')
         
-        self.driver.maximize_window()      #Maximize the window
+        self.deck_code = deck_code
+        self.title = deck_code
+
+        #self.title = self.driver.title.split()[:-2]     #Define the title of the deck
+        #self.title = ' '.join([str(item) for item in self.title])
+    
         
-        self.title = self.driver.title.split()[:-2]     #Define the title of the deck
-        self.title = ' '.join([str(item) for item in self.title])
         
-        print("Waiting for the privacy settings window to pop up")       #Agree to the privacy settings
-        time.sleep(1.5)
+    def open_driver(self, information):
+        '''Put in the information you wish to extract and open a driver with a website containing said information
+        '''
+        if information == 'Overview':
+            self.driver.get(f'https://hsreplay.net/decks/{self.deck_code}/#gameType=RANKED_STANDARD&tab=overview')
+        elif information == 'Card info':
+            self.driver.get(f'https://hsreplay.net/decks/{self.deck_code}/#gameType=RANKED_STANDARD')
+        else:
+            raise Exception(f'The desired information is not specified properly.')
+        
+        self.driver.maximize_window()
 
         try:
-            agree = self.driver.find_element_by_class_name('css-flk0bs')
-            agree.click()
-        except:
-            pass
-        print("Privacy settings window closed")
-        
+            WebDriverWait(self.driver, 10).until(lambda x: x.find_element_by_class_name('css-flk0bs'))
+            self.driver.find_element_by_class_name('css-flk0bs').click()
+        except TimeoutException:
+            raise Exception('The privacy window has not shown up; try running the script again')
+
+            
     def get_card_info(self):
         '''
         Get the card mana count, name and card count as a list called 'cards'
         '''
-        if not self.driver.current_url == f'https://hsreplay.net/decks/{self.deck_code}/#gameType=RANKED_STANDARD':
-            self.driver.get(f'https://hsreplay.net/decks/{self.deck_code}/#gameType=RANKED_STANDARD')
+        self.open_driver('Card info')
         data = self.driver.find_elements_by_class_name('table-row-header')
         cards = []
         for d in data:
@@ -69,18 +83,17 @@ class DeckAnalyzer:
                 row = [mana_cost, card_name, card_count]
                 cards.append(row)
             else:
-                print('Error - the scraper is not reading the card information properly')
-                break
-
+                raise Exception('Error - the scraper is not reading the card information properly')
+                
+        self.driver.quit()
         return cards
     
     def get_further_info(self):
         '''
         Get the remaining statistics about the cards in the deck and return these as a list called 'further_info'
         '''
-        if not self.driver.current_url == f'https://hsreplay.net/decks/{self.deck_code}/#gameType=RANKED_STANDARD':
-            self.driver.get(f'https://hsreplay.net/decks/{self.deck_code}/#gameType=RANKED_STANDARD')
-            
+        self.open_driver('Card info')           
+        
         data = self.driver.find_elements_by_class_name('table-cell')
         further_info = []
         for f in range(int(len(data)/6)):
@@ -93,7 +106,8 @@ class DeckAnalyzer:
             
             row = [mull_wr, per_kept, drawn_wr, played_wr, turns_held, turns_played]
             further_info.append(row)
-
+    
+        self.driver.quit()    
         return further_info
     
     
@@ -103,12 +117,15 @@ class DeckAnalyzer:
         '''
         print(f'Generating the card info for deck {self.title}')
         card_info = self.get_card_info()
+        print(f'Card info obtained')
         further_info = self.get_further_info()
+        print(f'Further info obtained')
         df_card = pd.DataFrame(card_info, columns = ['Mana Cost', 'Card Name', 'Card Count'])
         df_further = pd.DataFrame(further_info, columns = ['Mulligan WR', 'Kept', 'Drawn WR', 
                                                            'Played WR', 'Turns Held', 'Turns Played'])
-        df = pd.concat([df_card, df_further], axis = 1)
         
+        df = pd.concat([df_card, df_further], axis = 1)
+        print(f'Final data frame generated')
         return df
     
     
@@ -116,10 +133,9 @@ class DeckAnalyzer:
         '''
         Analyze the overview page of the deck and store this information in a data frame
         '''
-        print(f'Generating the overview for deck {self.title}')
-        if not self.driver.current_url == f'https://hsreplay.net/decks/{self.deck_code}/#gameType=RANKED_STANDARD&tab=overview':
-            self.driver.get(f'https://hsreplay.net/decks/{self.deck_code}/#gameType=RANKED_STANDARD&tab=overview')
-            
+        print(f'Generating the overview')
+        self.open_driver('Overview')
+        
         data = self.driver.find_elements_by_xpath("//tr/td[2]")
         
         overview = []
@@ -138,12 +154,14 @@ class DeckAnalyzer:
                                                'vs. Demon Hunter', 'vs. Druid', 'vs. Hunter',
                                                'vs. Mage', 'vs. Paladin', 'vs. Priest', 'vs. Rogue',
                                                'vs. Shaman', 'vs. Warlock', 'vs. Warrior', 'Sample Size'])
+        
+        self.driver.quit()
         return df
     
     def write_to_excel(self, today = date.today().strftime("%m-%d")):
         df1 = self.get_overview_df()
         df2 = self.get_card_info_df()
         
-        with pd.ExcelWriter(f'C:/Users/AU451FE/OneDrive - EY/Desktop/Python/HSreplay Scraper/Data Frames/{self.title} {today}.xlsx') as writer:
+        with pd.ExcelWriter(f'C:/Users/AU451FE/OneDrive - EY/Desktop/Python/HSreplay_Scraper/Data Frames/{self.title} {today}.xlsx') as writer:
             df1.to_excel(writer, sheet_name = 'Overview')
             df2.to_excel(writer, sheet_name = 'Card_Info')
