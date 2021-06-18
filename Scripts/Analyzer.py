@@ -15,9 +15,11 @@ from datetime import date
 import datetime
 import pandas as pd
 import numpy as np
+import warnings
 
-#import DeckAnalyzer as DA
 
+#Silence the deprecation warning when minimizing the external drivers
+warnings.filterwarnings('ignore', category=DeprecationWarning)
 
 
 
@@ -28,20 +30,30 @@ class DeckAnalyzer:
     Redownload the driver here if the version is outdated
     https://chromedriver.chromium.org/
     '''
-    def __init__(self, driver_path, deck_code):
-        self.driver = webdriver.Chrome(executable_path = driver_path)
-        
+    def __init__(self, driver_path, deck_code, minimized = True):
+        self.driver_path = driver_path
         self.deck_code = deck_code
+        self.minimized = minimized
         self.title = deck_code
-
         #self.title = self.driver.title.split()[:-2]     #Define the title of the deck
         #self.title = ' '.join([str(item) for item in self.title])
     
-        
-        
-    def open_driver(self, information):
-        '''Put in the information you wish to extract and open a driver with a website containing said information
+    def open_driver(self):
+        '''Open an empty driver with the specified driver path
         '''
+        if self.minimized == True:
+            options = webdriver.ChromeOptions()
+            options.set_headless(True) 
+            self.driver = webdriver.Chrome(self.driver_path,options=options) 
+        else:
+            self.driver = webdriver.Chrome(self.driver_path)
+            
+        return None    
+        
+    def open_website(self, information):
+        '''Put in the information you wish to extract and open a website with a website containing said information
+        '''
+        self.open_driver()
         if information == 'Overview':
             self.driver.get(f'https://hsreplay.net/decks/{self.deck_code}/#gameType=RANKED_STANDARD&tab=overview')
         elif information == 'Card info':
@@ -57,12 +69,13 @@ class DeckAnalyzer:
         except TimeoutException:
             raise Exception('The privacy window has not shown up; try running the script again')
 
-            
+        return None
+        
     def get_card_info(self):
         '''
         Get the card mana count, name and card count as a list called 'cards'
         '''
-        self.open_driver('Card info')
+        self.open_website('Card info')
         data = self.driver.find_elements_by_class_name('table-row-header')
         cards = []
         for d in data:
@@ -92,7 +105,7 @@ class DeckAnalyzer:
         '''
         Get the remaining statistics about the cards in the deck and return these as a list called 'further_info'
         '''
-        self.open_driver('Card info')           
+        self.open_website('Card info')           
         
         data = self.driver.find_elements_by_class_name('table-cell')
         further_info = []
@@ -134,7 +147,7 @@ class DeckAnalyzer:
         Analyze the overview page of the deck and store this information in a data frame
         '''
         print(f'Generating the overview')
-        self.open_driver('Overview')
+        self.open_website('Overview')
         
         data = self.driver.find_elements_by_xpath("//tr/td[2]")
         
