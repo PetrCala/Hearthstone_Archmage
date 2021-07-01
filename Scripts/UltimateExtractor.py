@@ -6,9 +6,7 @@ import sys
 #Define the folder with the python scripts for web scraping in order to import these scripts
 #sys.path.insert(0, 'C:\\Users\\hso20\\Python\\HSreplay_scraper\\Scripts')
 sys.path.insert(0, 'C:\\Users\\AU451FE\\OneDrive - EY\\Desktop\\Python\\HSreplay_scraper\\Scripts')
-from Analyzer import DeckAnalyzer as DA
-from Selector import DeckSelector as DS
-from Extractor import ArchetypeExtractor as AE
+import Extractors
 
 #External browser Selenium
 import selenium
@@ -22,7 +20,6 @@ from selenium.webdriver.support import expected_conditions as EC
 
 
 #Other useful packages
-import sys
 from bs4 import BeautifulSoup
 import requests
 import time
@@ -32,6 +29,7 @@ import pandas as pd
 import numpy as np
 import re #String search
 import warnings
+import os
 from os import path as path_os
 
 #Silence the deprecation warning when minimizing the external drivers
@@ -39,19 +37,12 @@ warnings.filterwarnings('ignore', category=DeprecationWarning)
 
 #driver_path = 'C:/Users/hso20/Python/HSreplay_scraper/chromedriver'
 driver_path = 'C:/Users/AU451FE/OneDrive - EY/Desktop/Python/HSreplay_scraper/chromedriver'
-deck_folder = 'C:/Users/AU451FE/OneDrive - EY/Desktop/Python/HSreplay_scraper/Data Frames/'
+deck_folder = 'C:/Users/AU451FE/OneDrive - EY/Desktop/Python/HSreplay_scraper/Data Frames'
 #deck_folder = 'C:/\Users/hso20/Python/HSreplay_scraper/Data Frames/'
 
 
-class UltimateAnalyzer:
+class UltimateExtractor:
     '''Return data on all or some decks from the hsreplay website as a data frame.
-
-        :attributes:
-        - driver_path (str): The path to the driver, which the class uses to scrape data.
-        - minimized (bool): Open the driver in a visible mode if true. Open it hidden if false.
-        
-        :usage:
-            U = UltimateAnalyzer(driver_path = driver_path, minimized = True)  
     '''
     def __init__(self, driver_path, deck_folder, minimized = False):
         '''
@@ -61,6 +52,9 @@ class UltimateAnalyzer:
         - driver_path (str): The path to the driver, which the class uses to scrape data.
         - deck_folder (str): The path to the folder where the generated data should be stored.
         - minimized (bool): Open the driver in a visible mode if true. Open it hidden if false.
+        
+        :usage:
+            U = UltimateExtractor(driver_path = driver_path, minimized = True)  
         
         :warning:
         - Using a headless (minimized) browser will result in a substantial CPU usage increase.
@@ -212,7 +206,7 @@ class UltimateAnalyzer:
 
     
     def get_archetype_data(self, class_name, arch_name):
-        '''Specify the name for the archetype and return the data from the hsreplay website for t given archetype
+        '''Specify the name for the archetype and return the data from the hsreplay website for the given archetype.
         
         :args:
         - class_name (str): Name of the class.
@@ -227,9 +221,12 @@ class UltimateAnalyzer:
         - data_frames (pandas.DataFrame): A data frame containing data for the given archetype.
         '''
         #Pre-processing and identifying the data        
+        class_name = class_name.title()
+        arch_name = arch_name.title()     
+                
         class_codes = {'Demon Hunter' : 1, 'Druid' : 2, 'Hunter' : 3, 'Mage' : 4, 'Paladin' : 5,
                        'Priest' : 6, 'Rogue' : 7 , 'Shaman' : 8, 'Warlock' : 9, 'Warrior' : 10}
-       
+        
         class_index = class_codes.get(class_name)
         
         if class_index == None:
@@ -251,7 +248,7 @@ class UltimateAnalyzer:
         
         
         xpath_arch = f'//*[@id="player-class-filter"]/div/div[2]/div/ul/li/span[text() = "{arch_name}"]'
-        y = U.driver.find_element_by_xpath(xpath_arch)
+        y = self.driver.find_element_by_xpath(xpath_arch)
         y.click()
         
         deck_amount = len(self.driver.find_elements_by_xpath('//*[@id="decks-container"]/main/div[3]/section/ul/li/a'))
@@ -270,22 +267,30 @@ class UltimateAnalyzer:
             l = self.driver.find_element_by_xpath(xpath_deck)
             l.click()
 
-            u.until(EC.presence_of_element_located((By.CLASS_NAME,"sort-header__title")))   
-
-            card_info = self.get_card_info()
-            data_frames.append(card_info)
+            try:
+                u.until(EC.presence_of_element_located((By.CLASS_NAME,"sort-header__title")))  
+                
+                card_info = self.get_card_info()
+                data_frames.append(card_info)
+            except:
+                print('This deck is missing card data')
+                pass
 
             #Switch to overview
             overview_button = self.driver.find_element_by_id('tab-overview')
             overview_button.click()
+            
+            try:
+                u.until(EC.presence_of_element_located((By.CLASS_NAME,"winrate-cell")))
 
-            u.until(EC.presence_of_element_located((By.CLASS_NAME,"winrate-cell")))
-
-            overview = self.get_overview()
-            overviews_df = overviews_df.append(overview)
+                overview = self.get_overview()
+                overviews_df = overviews_df.append(overview)
+            except:
+                print('This deck is missing overview data')
+                pass
 
             deck_position = d + 1
-            print(f'Generated data for {deck_position}/{deck_amount} decks of archetype {arch_name}')
+            print(f'Extracted data for {deck_position}/{deck_amount} decks of archetype {arch_name}')
             self.driver.back()
         
         data_frames.insert(0, overviews_df)  
@@ -308,8 +313,11 @@ class UltimateAnalyzer:
         
         
         '''
+        class_name = class_name.title()
+        arch_name = arch_name.title()
+        
         today = date.today().strftime("%m-%d")
-        path_partial = f'{self.deck_folder}{today}'
+        path_partial = f'{self.deck_folder}/{today}'
         
         #Assert the existence of a folder into which to add the data
         if not path_os.exists(path_partial):
@@ -326,9 +334,15 @@ class UltimateAnalyzer:
         path = f'{path_partial}/{class_name} - {arch_name} {today}.xlsx'
         with pd.ExcelWriter(path) as writer:
              for i in range(sheet_n):
-                    df[i].to_excel(writer, sheet_name = f'{i}', index = False)
-
-
+                if i == 0:
+                    df[i].to_excel(writer, sheet_name = 'Overview', index = False)
+                else:
+                    index = i - 1
+                    temp = df[0].reset_index()
+                    deck_code = temp.loc[index, 'Deck Code']
+                    df[i].to_excel(writer, sheet_name = f'{deck_code}', index = False)
+        print('All done')
+                    
         return df
     
     def get_all_data(self, classes_skip = 0):
@@ -340,7 +354,7 @@ class UltimateAnalyzer:
         - classes_skip (int): Define how many classes to skip when collecting the data.
         '''
         today = date.today().strftime("%m-%d")
-        path_partial = f'{self.deck_folder}{today}'
+        path_partial = f'{self.deck_folder}/{today}'
 
         #Assert the existence of a folder into which to add the data
         if not path_os.exists(path_partial):
@@ -359,7 +373,7 @@ class UltimateAnalyzer:
             xpath_class = f'//*[@id="player-class-filter"]/div/div[1]/span[{index}]/div/img'
             c = self.driver.find_element_by_xpath(xpath_class)
             
-            class_name = c.get_attribute('alt').lower()
+            class_name = c.get_attribute('alt').title()
             c.click()   #Go to the website of the class
 
             
@@ -371,7 +385,7 @@ class UltimateAnalyzer:
                 k.click()
                 
                 data_frames = []
-                arch_name = k.text
+                arch_name = k.text.title()
                 
                 url = U.driver.current_url
                 arch_code = re.search('archetypes=(.+)', url).group(1)
@@ -390,22 +404,30 @@ class UltimateAnalyzer:
                     l = self.driver.find_element_by_xpath(xpath_deck)
                     l.click()
                            
-                    u.until(EC.presence_of_element_located((By.CLASS_NAME,"sort-header__title")))   
-                        
-                    card_info = self.get_card_info()
-                    data_frames.append(card_info)
+                    try:
+                        u.until(EC.presence_of_element_located((By.CLASS_NAME,"sort-header__title")))  
+
+                        card_info = self.get_card_info()
+                        data_frames.append(card_info)
+                    except:
+                        print('This deck is missing card data')
+                        pass 
 
                     #Switch to overview
                     overview_button = self.driver.find_element_by_id('tab-overview')
                     overview_button.click()
 
-                    u.until(EC.presence_of_element_located((By.CLASS_NAME,"winrate-cell")))
-                    
-                    overview = self.get_overview()
-                    overviews_df = overviews_df.append(overview)
+                    try:
+                        u.until(EC.presence_of_element_located((By.CLASS_NAME,"winrate-cell")))
+
+                        overview = self.get_overview()
+                        overviews_df = overviews_df.append(overview)
+                    except:
+                        print('This deck is missing overview data')
+                        pass
 
                     deck_position = d + 1
-                    print(f'Generated data for {deck_position}/{deck_amount} decks of archetype {arch_name}')
+                    print(f'Extracted data for {deck_position}/{deck_amount} decks of archetype {arch_name}')
                     self.driver.back()
                     
 
@@ -424,9 +446,16 @@ class UltimateAnalyzer:
                 #Write these data frames into excel
                 path = f'{path_partial}/{class_name} - {arch_name} {today}.xlsx'
                 with pd.ExcelWriter(path) as writer:
-                    for i in range(sheet_n):
-                        data_frames[i].to_excel(writer, sheet_name = f'{i}', index = False)
+                     for i in range(sheet_n):
+                        if i == 0:
+                            data_frames[i].to_excel(writer, sheet_name = 'Overview', index = False)
+                        else:
+                            index = i - 1
+                            temp = data_frames[0].reset_index()
+                            deck_code = temp.loc[index, 'Deck Code']
+                            data_frames[i].to_excel(writer, sheet_name = f'{deck_code}', index = False)
 
         self.driver.quit()
+        print('All done')
         
         return data_frames
