@@ -89,7 +89,6 @@ class UltimateExtractor:
             
         :returns:
         - None: An open website using a specified link.
-        
         '''
         self.open_driver()
         self.driver.get(link)
@@ -107,16 +106,26 @@ class UltimateExtractor:
     
     def get_card_info(self):
         '''Analyze the mulligan guide page of a deck and store this information in a data frame.
-        
+
         :assumptions:
         - An already opened driver with a window containing the mulligan guide information.
 
         :usage:
             (self.open_website(specify_link_here)) -> self.get_card_info()
-            
+
         :returns:
         - df (pd.DataFrame): A data frame containing data about the cards from a given deck.
         '''
+        url = self.driver.current_url
+        
+        name_of_class = self.driver.find_element_by_xpath('//*[@id="deck-container"]/div/aside/ul/li[1]/a').text
+        try:
+            name_of_deck = self.driver.find_element_by_xpath('//*[@id="deck-container"]/div/aside/ul/li[2]/span/a').text
+        except:
+            name_of_deck = 'Other'
+        code = re.search('decks/(.+?)/', url).group(1)
+        date_of_deck = date.today()
+        
         #Generating the card names data
         card_names = self.driver.find_elements_by_class_name('table-row-header')
         cards = []
@@ -128,14 +137,14 @@ class UltimateExtractor:
                 card_name = txt[2]
                 card_count = int(txt[1].replace('★', '1'))
 
-                row = [mana_cost, card_name, card_count]
+                row = [name_of_class, name_of_deck, code, date_of_deck, mana_cost, card_name, card_count]
                 cards.append(row)
             elif len(txt) == 2:
                 mana_cost = int(txt[0])
                 card_name = txt[1]
                 card_count = 1
-                
-                row = [mana_cost, card_name, card_count]
+
+                row = [name_of_class, name_of_deck, code, date_of_deck, mana_cost, card_name, card_count]
                 cards.append(row)
             else:
                 raise Exception('Error - the scraper is not reading the card information properly')
@@ -151,21 +160,22 @@ class UltimateExtractor:
                 played_wr = data[3+6*d].text.replace('▼', '').replace('▲', '')
                 turns_held = float(data[4+6*d].text)
                 turns_played = float(data[5+6*d].text)
-            
+
                 row = [mull_wr, per_kept, drawn_wr, played_wr, turns_held, turns_played]
             except ValueError:
                 print('Some cards in this deck contain missing data')
                 row = []
-                
+
             further_info.append(row)
 
         #Concatenating the two data frames together    
-        df_card = pd.DataFrame(cards, columns = ['Mana Cost', 'Card Name', 'Card Count'])
+        df_card = pd.DataFrame(cards, columns = ['Class', 'Deck Name', 'Deck Code', 'Date',
+                                                 'Mana Cost', 'Card Name', 'Card Count'])
         df_further = pd.DataFrame(further_info, columns = ['Mulligan WR', 'Kept', 'Drawn WR', 
                                                            'Played WR', 'Turns Held', 'Turn Played'])
-        
+
         df = pd.concat([df_card, df_further], axis = 1)
-        
+
         return df
 
         
@@ -183,10 +193,16 @@ class UltimateExtractor:
         '''
         data = self.driver.find_elements_by_xpath("//tr/td[2]")
         url = self.driver.current_url
-        code = re.search('decks/(.+?)/#tab', url).group(1)
         
-        overview = []
-        overview.append(code)
+        name_of_class = self.driver.find_element_by_xpath('//*[@id="deck-container"]/div/aside/ul/li[1]/a').text
+        try:
+            name_of_deck = self.driver.find_element_by_xpath('//*[@id="deck-container"]/div/aside/ul/li[2]/span/a').text
+        except:
+            name_of_deck = 'Other'
+        code = re.search('decks/(.+?)/', url).group(1)
+        date_of_deck = date.today()
+
+        overview = [name_of_class, name_of_deck, code, date_of_deck]
         for d in data:
             text = d.text.replace('▼', '').replace('▲', '')
             overview.append(text)
@@ -197,7 +213,8 @@ class UltimateExtractor:
         
         overview = [overview]
         
-        df = pd.DataFrame(overview, columns = ['Deck Code', 'Match Duration', 'Turns', 'Turn Duration', 'Overall Winrate',
+        df = pd.DataFrame(overview, columns = ['Class', 'Deck Name', 'Deck Code', 'Date', 
+                                               'Match Duration', 'Turns', 'Turn Duration', 'Overall Winrate',
                                                'vs. Demon Hunter', 'vs. Druid', 'vs. Hunter',
                                                'vs. Mage', 'vs. Paladin', 'vs. Priest', 'vs. Rogue',
                                                'vs. Shaman', 'vs. Warlock', 'vs. Warrior', 'Sample Size'])
@@ -269,7 +286,7 @@ class UltimateExtractor:
 
             try:
                 u.until(EC.presence_of_element_located((By.CLASS_NAME,"sort-header__title")))  
-                
+
                 card_info = self.get_card_info()
                 data_frames.append(card_info)
             except:
@@ -310,8 +327,6 @@ class UltimateExtractor:
         :usage:
             self.archetype_to_excel(class_name = 'Rogue', archetype = 'Miracle Rogue',
             'path' = )
-        
-        
         '''
         class_name = class_name.title()
         arch_name = arch_name.title()
