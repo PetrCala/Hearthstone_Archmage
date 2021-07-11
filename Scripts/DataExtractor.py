@@ -41,20 +41,20 @@ deck_folder = 'C:/Users/AU451FE/OneDrive - EY/Desktop/Python/HSreplay_scraper/Da
 #deck_folder = 'C:/\Users/hso20/Python/HSreplay_scraper/Data Frames/'
 
 
-class UltimateExtractor:
-    '''Return data on all or some decks from the hsreplay website as a data frame.
+class DataExtractor:
+    '''Extract data from the hsreplay.net website for either some or all archetypes in the game.
     '''
     def __init__(self, driver_path, deck_folder, minimized = False):
         '''
-        The constructor for UltimateAnalyzer class.
+        The constructor for DataExtractor class.
         
         :attributes:
-        - driver_path (str): The path to the driver, which the class uses to scrape data.
-        - deck_folder (str): The path to the folder where the generated data should be stored.
+        - driver_path (str): The path to the driver, which the class uses to scrape data. Input folder.
+        - deck_folder (str): The path to the folder where the generated data should be stored. Output folder.
         - minimized (bool): Open the driver in a visible mode if true. Open it hidden if false.
         
         :usage:
-            U = UltimateExtractor(driver_path = driver_path, minimized = True)  
+            E = DataExtractor(driver_path = driver_path, minimized = True)  
         
         :warning:
         - Using a headless (minimized) browser will result in a substantial CPU usage increase.
