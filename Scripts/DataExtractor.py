@@ -5,7 +5,7 @@ import sys
 
 #Define the folder with the python scripts for web scraping in order to import these scripts
 #sys.path.insert(0, 'C:\\Users\\hso20\\Python\\HSreplay_scraper\\Scripts')
-sys.path.insert(0, 'C:\\Users\\AU451FE\\OneDrive - EY\\Desktop\\Python\\HSreplay_scraper\\Scripts')
+sys.path.insert(0, 'C:\\Users\\AU451FE\\OneDrive - EY\\Desktop\\Python\\Hearthstone_Archmage\\Scripts')
 import Extractors
 
 #External browser Selenium
@@ -36,8 +36,8 @@ from os import path as path_os
 warnings.filterwarnings('ignore', category=DeprecationWarning)
 
 #driver_path = 'C:/Users/hso20/Python/HSreplay_scraper/chromedriver'
-driver_path = 'C:/Users/AU451FE/OneDrive - EY/Desktop/Python/HSreplay_scraper/chromedriver'
-deck_folder = 'C:/Users/AU451FE/OneDrive - EY/Desktop/Python/HSreplay_scraper/Data Frames'
+#driver_path = 'C:/Users/AU451FE/OneDrive - EY/Desktop/Python/HSreplay_scraper/chromedriver'
+#deck_folder = 'C:/Users/AU451FE/OneDrive - EY/Desktop/Python/HSreplay_scraper/Data Frames'
 #deck_folder = 'C:/\Users/hso20/Python/HSreplay_scraper/Data Frames/'
 
 
@@ -346,7 +346,7 @@ class DataExtractor:
         sheet_n = len(df)    
 
         #Write these data frames into excel
-        path = f'{path_partial}/{class_name} - {arch_name} {today}.xlsx'
+        path = f'{self.deck_folder}/{today}/{class_name} - {arch_name} {today}.xlsx'
         with pd.ExcelWriter(path) as writer:
              for i in range(sheet_n):
                 if i == 0:
