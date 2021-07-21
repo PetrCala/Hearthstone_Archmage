@@ -1,6 +1,6 @@
 #Importing the data extractor scripts
 import sys
-sys.path.insert(0, 'C:\\Users\\AU451FE\\OneDrive - EY\\Desktop\\Python\\HSreplay_scraper\\Scripts')
+sys.path.insert(0, 'C:\\Users\\AU451FE\\OneDrive - EY\\Desktop\\Python\\Hearthstone_Archmage\\Scripts')
 
 #import Extractors
 #from UltimateExtractor import UltimateExtractor as UE
@@ -13,9 +13,9 @@ import numpy as np
 import re #String search
 import os
 
-driver_path = r'C:\Users\AU451FE\OneDrive - EY\Desktop\Python\HSreplay_scraper\chromedriver'
-deck_folder = r'C:\Users\AU451FE\OneDrive - EY\Desktop\Python\HSreplay_scraper\Data Frames'
-analysis_path = r'C:\Users\AU451FE\OneDrive - EY\Desktop\Python\HSreplay_scraper\Data Frames\Analyzed'
+driver_path = r'C:\Users\AU451FE\OneDrive - EY\Desktop\Python\Hearthstone_Archmage\chromedriver'
+deck_folder = r'C:\Users\AU451FE\OneDrive - EY\Desktop\Python\Hearthstone_Archmage\Data Frames'
+analysis_path = r'C:\Users\AU451FE\OneDrive - EY\Desktop\Python\Hearthstone_Archmage\Data Frames\Analyzed'
 
 #driver_path = r'C:\Users\hso20\Python\HSreplay_scraper\chromedriver'
 #deck_folder = r'C:\Users\hso20\Python\HSreplay_scraper\Data Frames'
@@ -63,7 +63,7 @@ class DataProcessor:
             
         :args:
         - date (str): A date from which to load the data.
-        - class_name (str): A class for which to load the data.
+        - class_name (str): A class or a list of classes for which to load the data.
         - deck (str): A deck for which to load the data for. If set to None, load the data for all decks.
         
         :usage:
@@ -101,7 +101,10 @@ class DataProcessor:
         
         #Load all decks for a specified class
         elif class_name != None:
-            class_name = class_name.title()
+            if type(class_name) == list:
+                class_name = [c.title() for c in class_name]
+            else:
+                class_name = class_name.title()
             class_names = []
             class_names += [re.search(f'(.+) -', file).group(1) for file in file_names]
             
@@ -109,7 +112,7 @@ class DataProcessor:
             data_keys = []
             deck_names = []
             for i in range(len(class_names)):
-                if class_names[i] == class_name:
+                if class_names[i] in class_name:
                     temp = pd.read_excel(file_paths[i], sheet_name = None)
                     data.append(temp)
                     temp_keys = list()

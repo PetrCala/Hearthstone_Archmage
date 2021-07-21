@@ -5,7 +5,7 @@ import sys
 
 #Define the folder with the python scripts for web scraping in order to import these scripts
 #sys.path.insert(0, 'C:\\Users\\hso20\\Python\\HSreplay_scraper\\Scripts')
-sys.path.insert(0, 'C:\\Users\\AU451FE\\OneDrive - EY\\Desktop\\Python\\Hearthstone_Archmage\\Scripts')
+#sys.path.insert(0, 'C:\\Users\\AU451FE\\OneDrive - EY\\Desktop\\Python\\Hearthstone_Archmage\\Scripts')
 import Extractors
 
 #External browser Selenium
@@ -35,10 +35,10 @@ from os import path as path_os
 #Silence the deprecation warning when minimizing the external drivers
 warnings.filterwarnings('ignore', category=DeprecationWarning)
 
-#driver_path = 'C:/Users/hso20/Python/HSreplay_scraper/chromedriver'
-#driver_path = 'C:/Users/AU451FE/OneDrive - EY/Desktop/Python/HSreplay_scraper/chromedriver'
-#deck_folder = 'C:/Users/AU451FE/OneDrive - EY/Desktop/Python/HSreplay_scraper/Data Frames'
-#deck_folder = 'C:/\Users/hso20/Python/HSreplay_scraper/Data Frames/'
+#driver_path = 'C:/Users/hso20/Python/Hearthstone_Archmage/chromedriver'
+#driver_path = 'C:/Users/AU451FE/OneDrive - EY/Desktop/Python/Hearthstone_Archmage/chromedriver'
+#deck_folder = 'C:/Users/AU451FE/OneDrive - EY/Desktop/Python/Hearthstone_Archmage/Data Frames'
+#deck_folder = 'C:/\Users/hso20/Python/Hearthstone_Archmage/Data Frames/'
 
 
 class DataExtractor:
@@ -402,7 +402,7 @@ class DataExtractor:
                 data_frames = []
                 arch_name = k.text.title()
                 
-                url = U.driver.current_url
+                url = self.driver.current_url
                 arch_code = re.search('archetypes=(.+)', url).group(1)
 
                 overviews_df = pd.DataFrame()
