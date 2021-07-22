@@ -1,41 +1,25 @@
-#Importing the data extractor scripts
 import sys
-sys.path.insert(0, 'C:\\Users\\AU451FE\\OneDrive - EY\\Desktop\\Python\\Hearthstone_Archmage\\Scripts')
-
-#import Extractors
-#from UltimateExtractor import UltimateExtractor as UE
-
-#Other useful packages
-import time
 import datetime
 import pandas as pd
 import numpy as np
 import re #String search
 import os
 
-driver_path = r'C:\Users\AU451FE\OneDrive - EY\Desktop\Python\Hearthstone_Archmage\chromedriver'
-deck_folder = r'C:\Users\AU451FE\OneDrive - EY\Desktop\Python\Hearthstone_Archmage\Data Frames'
-analysis_path = r'C:\Users\AU451FE\OneDrive - EY\Desktop\Python\Hearthstone_Archmage\Data Frames\Analyzed'
-
-#driver_path = r'C:\Users\hso20\Python\HSreplay_scraper\chromedriver'
-#deck_folder = r'C:\Users\hso20\Python\HSreplay_scraper\Data Frames'
-#analysis_path = r'C:\Users\hso20\Python\HSreplay_scraper\Data Frames\Analyzed'
-
 class DataProcessor:
     '''Transform the extracted data to be used in further analysis and modelling.
     '''
-    def __init__(self, deck_folder, analysis_path):
-        '''The constructor for DataProcessor class.
-        
-        :attributes:
-        - deck_folder (str): The path to the folder where the generated data is stored. Input folder.
-        - analysis_path (str): The path to the folder where the processed data should be stored. Output folder.
-        
-        :usage:
-            P = DataProcessor(driver_path = driver_path, analysis_path = analysis_path)  
+    def __init__(self):
+        '''The constructor for DataProcessor class. 
         '''
-        self.deck_folder = deck_folder
-        self.analysis_path = analysis_path
+        #Defining file paths
+        self.base_path = re.search(f'(.+)Hearthstone_Archmage', os.getcwd()).group(1)\
+            + 'Hearthstone_Archmage'
+        script_path = self.base_path + '\Scripts'
+        if script_path not in sys.path:
+            sys.path.insert(0, script_path)    
+
+        self.deck_folder = f'{self.base_path}\Data Frames'
+        self.analysis_path = f'{self.base_path}\Analyzed' 
         
     def percentage_to_float(self, number):
         '''Input a number or a series of numbers and transform these to float or a series of floats.
@@ -136,7 +120,7 @@ class DataProcessor:
                 
         return data, data_keys, deck_names
     
-    def analyze_deck_winrates(self, date, deck = None, class_name = None):
+    def analyze_deck_winrates(self, date, deck = None, class_name = None, WR_against = None):
         '''Specify a date and a deck name or a class for which to analyze win rates and
                 return these as a pandas data frame.
             Said table contains the deck name and win rates both weighted and unweighted against all classes.
@@ -145,6 +129,8 @@ class DataProcessor:
         - date (str): The day for which to analyze the win rates.
         - class_name (str): A class for which to analyze the win rates.
         - deck (str): The deck for which to analyze the win rates.
+        - WR_against (str or list): A class or a list of classes for which to observe the
+            win rate against. If set to None, extracts all data.
         
         :usage:
             self.analyze_deck_winrates('07-01', deck = 'Rogue - Miracle Rogue')
@@ -168,7 +154,17 @@ class DataProcessor:
             deck_count = 0
             for d in data:
                 overview = d.get('Overview')
-                win_rates = overview.loc[:, 'Overall Winrate':'vs. Warlock'].apply(lambda x: self.percentage_to_float(x))
+                if WR_against == None:
+                    win_rates = overview.loc[:, 'Overall Winrate':'vs. Warlock']
+                else:
+                    if 'All' in WR_against:
+                        winrate_cols = ['Overall Winrate']
+                    else:
+                        winrate_cols = []
+                    winrate_cols += [f'vs. {i}' for i in WR_against if i != 'All']
+                    win_rates = overview.loc[:, winrate_cols]
+
+                win_rates = win_rates.apply(lambda x: self.percentage_to_float(x))
                 sample_size = overview.loc[:, 'Sample Size']
 
                 #Unweighted win rates
@@ -193,7 +189,17 @@ class DataProcessor:
                 
         else:
             overview = data.get('Overview')
-            win_rates = overview.loc[:, 'Overall Winrate':'vs. Warlock'].apply(lambda x: self.percentage_to_float(x))
+            if WR_against == None:
+                win_rates = overview.loc[:, 'Overall Winrate':'vs. Warlock']
+            else:
+                if 'All' in WR_against:
+                    winrate_cols = ['Overall Winrate']
+                else:
+                    winrate_cols = []
+                winrate_cols += [f'vs. {i}' for i in WR_against if i != 'All']
+                win_rates = overview.loc[:, winrate_cols]
+
+            win_rates = win_rates.apply(lambda x: self.percentage_to_float(x))
             sample_size = overview.loc[:, 'Sample Size']
 
             #Unweighted win rates
@@ -214,7 +220,7 @@ class DataProcessor:
         
         return data_output
     
-    def prepare_winrates_df(self, date, deck = None, class_name = None):
+    def prepare_winrates_df(self, date, deck = None, class_name = None, WR_against = None):
         '''Specify a date and a deck name or a class for which to prepare the win rate data frames for and
                 return these as two separate pandas data frames, unweighted and weighted by sample size.
             These contain information on win rates of all archetypes overall and against all classes.
@@ -223,6 +229,8 @@ class DataProcessor:
         - date (str): The day for which to prepare the win rate data frames for.
         - class_name (str): A class for which to prepare the win rate data frames for.    
         - deck (str): The deck for which to prepare the win rate data frames for.
+        - WR_against (str or list): A class or a list of classes for which to observe the
+            win rate against.
         
         :usage:
             self.prepare_winrates_df('07-01', deck = 'Rogue - Miracle Rogue')
@@ -234,33 +242,41 @@ class DataProcessor:
         :returns:
         - data_u (pd.DataFrame): A pandas data frame containing the unweighted win rates against all classes.
         - data_w (pd.DataFrame): A pandas data frame containing the weighted win rates against all classes.
+
             
         :note:
         - The deck name must be passed in a predefined format (e.g., Rogue - Miracle Rogue),
             apart from capitalization, which does need to be correct.
         '''
     
-        temp = self.analyze_deck_winrates(date = date, deck = deck, class_name = class_name)
+        temp = self.analyze_deck_winrates(date = date, deck = deck, class_name = class_name,
+            WR_against = WR_against)
         
-        #Unweighted data frame
         data_u = pd.DataFrame()
-        for i in range(len(temp)):
-            one_deck = temp[i]
-            pivot_deck = pd.pivot_table(data = one_deck, values = 'Unweighted Win Rate',
-                                        index = 'Deck Name', columns = 'Versus')
-            data_u = pd.concat([data_u, pivot_deck], axis = 0)
-                    
-        #Weighted data frame
         data_w = pd.DataFrame()
-        for i in range(len(temp)):
-            one_deck = temp[i]
-            pivot_deck = pd.pivot_table(data = one_deck, values = 'Weighted Win Rate',
+        if type(temp) == list:
+            for i in range(len(temp)):
+                one_deck = temp[i]
+                u_deck = pd.pivot_table(data = one_deck, values = 'Unweighted Win Rate',
+                                            index = 'Deck Name', columns = 'Versus')
+                data_u = pd.concat([data_u, u_deck], axis = 0)
+
+                w_deck = pd.pivot_table(data = one_deck, values = 'Weighted Win Rate',
+                                            index = 'Deck Name', columns = 'Versus')
+                data_w = pd.concat([data_w, w_deck], axis = 0)
+        else:
+            u_deck = pd.pivot_table(data = temp, values = 'Unweighted Win Rate',
                                         index = 'Deck Name', columns = 'Versus')
-            data_w = pd.concat([data_w, pivot_deck], axis = 0)
-            
+            data_u = pd.concat([data_u, u_deck], axis = 0)
+
+            w_deck = pd.pivot_table(data = temp, values = 'Weighted Win Rate',
+                                        index = 'Deck Name', columns = 'Versus')
+            data_w = pd.concat([data_w, w_deck], axis = 0)            
+
         return data_u, data_w
                 
-    def win_rates_to_excel(self, date, weighted = True, deck = None, class_name = None):
+    def win_rates_to_excel(self, date, weighted = True, deck = None, class_name = None,
+        WR_against = None):
         '''Specify a date and a deck name, along with variables win_rates and weighted and create an excel file for data
             satisfying said parameters.
             
@@ -272,6 +288,8 @@ class DataProcessor:
             If false, use unweighted win rates.
         - deck (str): The deck for which to create the excel file for.
         - class_name (str): Name of the class for which to create the excel file for.
+        - WR_against (str or list): A class or a list of classes for which to observe the
+            win rate against.       
 
         :usage:
             self.win_rates_to_excel(date = '07-01', win_rates = True, weighted = True, deck = 'Rogue - Miracle Rogue')
@@ -287,15 +305,15 @@ class DataProcessor:
         '''
         data_u, data_w = self.prepare_winrates_df(date = date, deck = deck, class_name = class_name)
         if weighted == True:
-            path = f'{analysis_path}/Unweighted win rates.xlsx'.replace('/', '\\') 
+            path = f'{self.analysis_path}/Unweighted win rates.xlsx'.replace('/', '\\') 
             data_u.to_excel(path)
         else:
-            path = f'{analysis_path}/Weighted rates.xlsx'.replace('/', '\\') 
+            path = f'{self.analysis_path}/Weighted rates.xlsx'.replace('/', '\\') 
             data_w.to_excel(path)
             
         return None
     
-    def prepare_model_df(self, date, processed = True, deck = None, class_name = None, WR_against = 'All'):
+    def prepare_card_df(self, date, processed = True, deck = None, class_name = None, WR_against = None):
         '''Specify a date, a win rate type and a deck name or a class for which to prepare the model data frame
             for and return this as a pandas data frame.
             This contains all information about the specified deck or all decks which are avilable
@@ -309,11 +327,11 @@ class DataProcessor:
         - WR_against (str): The type of win rate which to use as a dependent variable in the models.        
         
         :usage:
-            self.prepare_model_df('07-01', deck = 'Rogue - Miracle Rogue')
+            self.prepare_card_df('07-01', deck = 'Rogue - Miracle Rogue')
             ~
-            self.prepare_model_df('07-01', class_name = 'Rogue', WR_against = 'Druid')
+            self.prepare_card_df('07-01', class_name = 'Rogue', WR_against = 'Druid')
             ~            
-            self.prepare_model_df('07-01', processed = False)
+            self.prepare_card_df('07-01', processed = False)
             
         :returns:
         - df (pd.DataFrame): A pandas data frame containing the data from hsreplay.net to be used in further analysis and modelling.
@@ -331,44 +349,54 @@ class DataProcessor:
         #Loading the data
         temp1 = pd.DataFrame()
         temp2 = pd.DataFrame()
-        
-        for d in data:
-            for i in d:
-                card_info = d[i]
-                if i == 'Overview':
-                    temp1 = temp1.append(card_info)
-                else:
-                    temp2 = temp2.append(card_info)
-        
+
+        if type(data) == list:
+            for d in data:
+                for i in d:
+                    card_info = d[i]
+                    if i == 'Overview':
+                        temp1 = temp1.append(card_info)
+                    else:
+                        temp2 = temp2.append(card_info)
+        else:
+                for i in data:
+                    card_info = data[i]
+                    if i == 'Overview':
+                        temp1 = temp1.append(card_info)
+                    else:
+                        temp2 = temp2.append(card_info)           
+            
         temp = temp1.merge(temp2)
-        
         
         #Processing the data to be used in further modelling
         if processed == True:
             winrate_cols = ['Overall Winrate', 'vs. Demon Hunter', 'vs. Druid', 'vs. Hunter', 'vs. Mage',
                             'vs. Paladin', 'vs. Priest', 'vs. Rogue', 'vs. Shaman', 'vs. Warlock', 'vs. Warrior',
                             'Mulligan WR', 'Kept', 'Drawn WR', 'Played WR']
-            
+                            
+            if WR_against == None:
+                WR_type = winrate_cols[:winrate_cols.index('vs. Warrior')]
+            else:
+                if 'All' in WR_against:
+                    WR_type = ['Overall Winrate']
+                else:
+                    WR_type = []
+                WR_type += [f'vs. {i}' for i in WR_against if i != 'All']
+
             temp[winrate_cols] = temp[winrate_cols].apply(lambda x: self.percentage_to_float(x))
             
-            if WR_against == 'All':
-                WR_type = 'Overall Winrate'
-            else:
-                WR_type = f'vs. {WR_against}'
-                
-            new_cols = ['Class', 'Deck Name', 'Deck Code', 'Date', 'Sample Size', WR_type]
+            new_cols = ['Class', 'Deck Name', 'Deck Code', 'Date', 'Sample Size']
+            new_cols += [i for i in WR_type]
+            new_cols += [i for i in ['Mulligan WR', 'Kept', 'Drawn WR', 'Played WR']]
             df = temp[new_cols]
 
             #Getting dummy variables for all the cards
             dummies = pd.get_dummies(temp['Card Name']).apply(lambda x: x*temp['Card Count'])
             df = pd.concat([df, dummies], axis = 1)
 
-        
-        
         return df
 
-    
-    def model_data_to_excel(self, date, processed = True, deck = None, class_name = None, WR_against = 'All'):
+    def card_data_to_excel(self, date, processed = True, deck = None, class_name = None, WR_against = 'All'):
         '''Specify a date and a deck name, along with a variable 'processed' and create an excel file for data
             satisfying said parameters.
             
@@ -380,9 +408,9 @@ class DataProcessor:
         - WR_against (str): The type of win rate which to use as a dependent variable in the models.          
 
         :usage:
-            self.model_data_to_excel(date = '07-01', processed = True, deck = 'Rogue - Miracle Rogue')
+            self.card_data_to_excel(date = '07-01', processed = True, deck = 'Rogue - Miracle Rogue')
             ~
-            self.model_data_to_excel(date = '07-01', processed = True, class_name = 'Rogue', WR_against = 'Hunter')
+            self.card_data_to_excel(date = '07-01', processed = True, class_name = 'Rogue', WR_against = 'Hunter')
             
         :returns:
         - None: Creates an excel file with specified parameters at the predefined path.
@@ -394,17 +422,17 @@ class DataProcessor:
             10 classes in the game. If set to all, use as a dependent variable the overall win rate of the 
             decks in the data set.            
         '''
-        data = self.prepare_model_df(date = date, processed = processed, deck = deck, class_name = class_name,
+        data = self.prepare_card_df(date = date, processed = processed, deck = deck, class_name = class_name,
                                         WR_against = WR_against)
 
         if deck != None:
-            path = f'{analysis_path}/Model data {deck} vs. {WR_against}.xlsx'.replace('/', '\\') 
+            path = f'{self.analysis_path}/Model data {deck} vs. {WR_against}.xlsx'.replace('/', '\\') 
             data.to_excel(path, index = False)          
         elif class_name != None:
-            path = f'{analysis_path}/Model data {class_name} vs. {WR_against}.xlsx'.replace('/', '\\') 
+            path = f'{self.analysis_path}/Model data {class_name} vs. {WR_against}.xlsx'.replace('/', '\\') 
             data.to_excel(path, index = False)        
         else:
-            path = f'{analysis_path}/Model data All vs. {WR_against}.xlsx'.replace('/', '\\') 
+            path = f'{self.analysis_path}/Model data All vs. {WR_against}.xlsx'.replace('/', '\\') 
             data.to_excel(path, index = False)              
     
         return None

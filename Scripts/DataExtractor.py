@@ -1,67 +1,39 @@
-#Installing packages onto the device
-#!{sys.executable} -m pip install -U selenium
-
-import sys
-
-#Define the folder with the python scripts for web scraping in order to import these scripts
-#sys.path.insert(0, 'C:\\Users\\hso20\\Python\\HSreplay_scraper\\Scripts')
-#sys.path.insert(0, 'C:\\Users\\AU451FE\\OneDrive - EY\\Desktop\\Python\\Hearthstone_Archmage\\Scripts')
-import Extractors
-
 #External browser Selenium
-import selenium
 from selenium import webdriver
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
-
 #Other useful packages
-from bs4 import BeautifulSoup
-import requests
-import time
+import sys
 from datetime import date
-import datetime
 import pandas as pd
 import numpy as np
-import re #String search
+import re
 import warnings
 import os
-from os import path as path_os
 
 #Silence the deprecation warning when minimizing the external drivers
 warnings.filterwarnings('ignore', category=DeprecationWarning)
 
-#driver_path = 'C:/Users/hso20/Python/Hearthstone_Archmage/chromedriver'
-#driver_path = 'C:/Users/AU451FE/OneDrive - EY/Desktop/Python/Hearthstone_Archmage/chromedriver'
-#deck_folder = 'C:/Users/AU451FE/OneDrive - EY/Desktop/Python/Hearthstone_Archmage/Data Frames'
-#deck_folder = 'C:/\Users/hso20/Python/Hearthstone_Archmage/Data Frames/'
-
-
 class DataExtractor:
     '''Extract data from the hsreplay.net website for either some or all archetypes in the game.
     '''
-    def __init__(self, driver_path, deck_folder, minimized = False):
+    def __init__(self):
         '''
-        The constructor for DataExtractor class.
-        
-        :attributes:
-        - driver_path (str): The path to the driver, which the class uses to scrape data. Input folder.
-        - deck_folder (str): The path to the folder where the generated data should be stored. Output folder.
-        - minimized (bool): Open the driver in a visible mode if true. Open it hidden if false.
-        
-        :usage:
-            E = DataExtractor(driver_path = driver_path, minimized = True)  
-        
-        :warning:
-        - Using a headless (minimized) browser will result in a substantial CPU usage increase.
+        The constructor for DataExtractor class. 
         '''
-        self.driver_path = driver_path
-        self.deck_folder = deck_folder
-        self.minimized = minimized
+        #Defining file paths
+        self.base_path = re.search(f'(.+)Hearthstone_Archmage', os.getcwd()).group(1)\
+            + 'Hearthstone_Archmage'
+        script_path = self.base_path + '\Scripts'
+        if script_path not in sys.path:
+            sys.path.insert(0, script_path) 
+               
+        self.driver_path = f'{self.base_path}\chromedriver'
+        self.deck_folder = f'{self.base_path}\Data Frames'
+        self.analysis_path = f'{self.base_path}\Analyzed' 
 
     def open_driver(self):
         '''Open an empty driver with the specified driver path.
@@ -69,12 +41,7 @@ class DataExtractor:
         :returns:
         - None: An open empty driver.
         '''
-        if self.minimized == True:
-            options = webdriver.ChromeOptions()
-            options.set_headless(True) 
-            self.driver = webdriver.Chrome(self.driver_path,options=options) 
-        else:
-            self.driver = webdriver.Chrome(self.driver_path)
+        self.driver = webdriver.Chrome(self.driver_path)
 
         return None
     
@@ -101,7 +68,7 @@ class DataExtractor:
         except TimeoutException:
             raise Exception('The privacy window has not shown up; try running the script again')
 
-        print('Website successfuly opened')    
+        print('Website successfully opened')    
         return None
     
     def get_card_info(self):
@@ -335,7 +302,7 @@ class DataExtractor:
         path_partial = f'{self.deck_folder}/{today}'
         
         #Assert the existence of a folder into which to add the data
-        if not path_os.exists(path_partial):
+        if not os.path.exists(path_partial):
             os.makedirs(path_partial)
             print(f'Creating a folder {today} where the data will be stored')
         
@@ -372,7 +339,7 @@ class DataExtractor:
         path_partial = f'{self.deck_folder}/{today}'
 
         #Assert the existence of a folder into which to add the data
-        if not path_os.exists(path_partial):
+        if not os.path.exists(path_partial):
             os.makedirs(path_partial)
             print(f'Creating a folder {today} where the data will be stored')
                     
