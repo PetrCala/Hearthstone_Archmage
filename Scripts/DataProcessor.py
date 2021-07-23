@@ -8,7 +8,7 @@ import os
 class DataProcessor:
     '''Transform the extracted data to be used in further analysis and modelling.
     '''
-    def __init__(self):
+    def __init__(self, deck_folder = None, analysis_path = None):
         '''The constructor for DataProcessor class. 
         '''
         #Defining file paths
@@ -18,26 +18,44 @@ class DataProcessor:
         if script_path not in sys.path:
             sys.path.insert(0, script_path)    
 
-        self.deck_folder = f'{self.base_path}\Data Frames'
-        self.analysis_path = f'{self.base_path}\Analyzed' 
+        if deck_folder == None:
+            self.deck_folder = f'{self.base_path}\Data Frames'
+        else:
+            self.deck_folder = deck_folder
+        if analysis_path == None:
+            self.analysis_path = f'{self.base_path}\Data Frames\Analyzed' 
+        else:
+            self.analysis_path = analysis_path
         
-    def percentage_to_float(self, number):
-        '''Input a number or a series of numbers and transform these to float or a series of floats.
+    def percentage_float(self, number, P2F = True):
+        '''Input a number or a series of numbers, define whether the transformation
+            should be percentage to float or float to percentage and
+            transform the input accordingly
         
         :args:
-        - number (str or series): The data which should be transformed to float.
+        - number (str or series): The data which should be transformed.
+        - P2F (bool, optional): If True, the transformation shall be percentage
+            to float. If False, it shall be float to percentage. Defaults to True.
         
         :usage:
             self.percentage_to_float('69.8%')
             
         :returns:
-        - number (float or series of floats): The input transformed into float or a series of floats.
+        - number (a number or a series of numbers): The transformed input.
         '''
-        try:
-            number = number.str.strip('%').astype(float)/100 #For series
-        except AttributeError:
-            number = float(number.strip('%'))/100 #For single numbers
-        
+        if P2F == True:
+            try:
+                number = number.str.strip('%').astype(float)/100
+            except AttributeError:
+                number = float(number.strip('%'))/100
+        else:
+            def __repr__(self):
+                return '{:.2%}'.format(self)
+            try: 
+                number = number.apply(__repr__)
+            except AttributeError:
+                number = __repr__(number)
+
         return number
     
     def load_data(self, date, deck = None, class_name = None):
@@ -120,7 +138,8 @@ class DataProcessor:
                 
         return data, data_keys, deck_names
     
-    def analyze_deck_winrates(self, date, deck = None, class_name = None, WR_against = None):
+    def analyze_deck_winrates(self, date, deck = None, class_name = None, WR_against = None,
+                to_percentage = False):
         '''Specify a date and a deck name or a class for which to analyze win rates and
                 return these as a pandas data frame.
             Said table contains the deck name and win rates both weighted and unweighted against all classes.
@@ -164,7 +183,7 @@ class DataProcessor:
                     winrate_cols += [f'vs. {i}' for i in WR_against if i != 'All']
                     win_rates = overview.loc[:, winrate_cols]
 
-                win_rates = win_rates.apply(lambda x: self.percentage_to_float(x))
+                win_rates = win_rates.apply(lambda x: self.percentage_float(x))
                 sample_size = overview.loc[:, 'Sample Size']
 
                 #Unweighted win rates
@@ -174,16 +193,20 @@ class DataProcessor:
                 weights = sample_size/sum(sample_size)
                 temp = win_rates.apply(lambda x: x*weights)
                 WR_weighted = temp.apply(np.sum, axis = 0)
-            
+
+                if to_percentage == True:
+                    WR_unweighted = WR_unweighted.apply(lambda x:\
+                            self.percentage_float(x, P2F = False))
+                    WR_weighted = WR_weighted.apply(lambda x:\
+                            self.percentage_float(x, P2F = False))   
+
                 deck_name = deck_names[deck_count]
                 deck_count += 1
                 temp = pd.DataFrame({'Deck Name': deck_name,
                                     'Unweighted Win Rate': WR_unweighted,
                                     'Weighted Win Rate' : WR_weighted})
                 
-                temp = temp.reset_index()
-                temp = temp.set_index('Deck Name')
-                temp = temp.rename(columns = {'index' : 'Versus'})                
+                temp = temp.reset_index()             
                 
                 data_output.append(temp)
                 
@@ -199,7 +222,7 @@ class DataProcessor:
                 winrate_cols += [f'vs. {i}' for i in WR_against if i != 'All']
                 win_rates = overview.loc[:, winrate_cols]
 
-            win_rates = win_rates.apply(lambda x: self.percentage_to_float(x))
+            win_rates = win_rates.apply(lambda x: self.percentage_float(x))
             sample_size = overview.loc[:, 'Sample Size']
 
             #Unweighted win rates
@@ -209,18 +232,23 @@ class DataProcessor:
             weights = sample_size/sum(sample_size)
             temp = win_rates.apply(lambda x: x*weights)
             WR_weighted = temp.apply(np.sum, axis = 0)
+
+            if to_percentage == True:
+                WR_unweighted = WR_unweighted.apply(lambda x:\
+                    self.percentage_float(x, P2F = False))
+                WR_weighted = WR_weighted.apply(lambda x:\
+                        self.percentage_float(x, P2F = False))             
             
             temp = pd.DataFrame({'Deck Name': deck_names,
                                     'Unweighted Win Rate': WR_unweighted,
                                     'Weighted Win Rate' : WR_weighted})
-            
-            temp = temp.reset_index()
-            temp = temp.set_index('Deck Name')
-            data_output = temp.rename(columns = {'index' : 'Versus'})
+
+            data_output = temp.reset_index()
         
         return data_output
     
-    def prepare_winrates_df(self, date, deck = None, class_name = None, WR_against = None):
+    def prepare_winrates_df(self, date, deck = None, class_name = None, WR_against = None,
+                to_percentage = False):
         '''Specify a date and a deck name or a class for which to prepare the win rate data frames for and
                 return these as two separate pandas data frames, unweighted and weighted by sample size.
             These contain information on win rates of all archetypes overall and against all classes.
@@ -250,33 +278,41 @@ class DataProcessor:
         '''
     
         temp = self.analyze_deck_winrates(date = date, deck = deck, class_name = class_name,
-            WR_against = WR_against)
+            WR_against = WR_against, to_percentage = False)
         
-        data_u = pd.DataFrame()
-        data_w = pd.DataFrame()
         if type(temp) == list:
+            data_u = pd.DataFrame()
+            data_w = pd.DataFrame()
             for i in range(len(temp)):
                 one_deck = temp[i]
                 u_deck = pd.pivot_table(data = one_deck, values = 'Unweighted Win Rate',
-                                            index = 'Deck Name', columns = 'Versus')
-                data_u = pd.concat([data_u, u_deck], axis = 0)
-
+                            index = 'Deck Name', columns = 'index')
                 w_deck = pd.pivot_table(data = one_deck, values = 'Weighted Win Rate',
-                                            index = 'Deck Name', columns = 'Versus')
-                data_w = pd.concat([data_w, w_deck], axis = 0)
-        else:
-            u_deck = pd.pivot_table(data = temp, values = 'Unweighted Win Rate',
-                                        index = 'Deck Name', columns = 'Versus')
-            data_u = pd.concat([data_u, u_deck], axis = 0)
+                                index = 'Deck Name', columns = 'index')
 
-            w_deck = pd.pivot_table(data = temp, values = 'Weighted Win Rate',
-                                        index = 'Deck Name', columns = 'Versus')
-            data_w = pd.concat([data_w, w_deck], axis = 0)            
+                if to_percentage == True:
+                    u_deck = u_deck.apply(lambda x: self.percentage_float(x, P2F = False))                 
+                    w_deck = w_deck.apply(lambda x: self.percentage_float(x, P2F = False))
+
+                data_u = pd.concat([data_u, u_deck], axis = 0)                                 
+                data_w = pd.concat([data_w, w_deck], axis = 0)  
+        else:
+            data_u = pd.DataFrame(pd.pivot_table(data = temp, values = 'Unweighted Win Rate',
+                        index = 'Deck Name', columns = 'index'))
+            data_w = pd.DataFrame(pd.pivot_table(data = temp, values = 'Weighted Win Rate',
+                            index = 'Deck Name', columns = 'index'))
+
+            if to_percentage == True:
+                data_u = data_u.apply(lambda x: self.percentage_float(x, P2F = False))                 
+                data_w = data_w.apply(lambda x: self.percentage_float(x, P2F = False))                            
+
+        data_u = data_u.reset_index()
+        data_w = data_w.reset_index()
 
         return data_u, data_w
                 
     def win_rates_to_excel(self, date, weighted = True, deck = None, class_name = None,
-        WR_against = None):
+        WR_against = None, to_percentage = False):
         '''Specify a date and a deck name, along with variables win_rates and weighted and create an excel file for data
             satisfying said parameters.
             
@@ -303,13 +339,14 @@ class DataProcessor:
         - The deck name must be passed in a predefined format (e.g., Rogue - Miracle Rogue),
             apart from capitalization, which does need to be correct.            
         '''
-        data_u, data_w = self.prepare_winrates_df(date = date, deck = deck, class_name = class_name)
+        data_u, data_w = self.prepare_winrates_df(date = date, deck = deck,
+            class_name = class_name, WR_against = WR_against, to_percentage = to_percentage)
         if weighted == True:
-            path = f'{self.analysis_path}/Unweighted win rates.xlsx'.replace('/', '\\') 
-            data_u.to_excel(path)
+            path = f'{self.analysis_path}/Unweighted win rates.xlsx'.replace('/', '\\')
+            data_u.to_excel(path, index = False)
         else:
             path = f'{self.analysis_path}/Weighted rates.xlsx'.replace('/', '\\') 
-            data_w.to_excel(path)
+            data_w.to_excel(path, index = False)
             
         return None
     
@@ -383,7 +420,7 @@ class DataProcessor:
                     WR_type = []
                 WR_type += [f'vs. {i}' for i in WR_against if i != 'All']
 
-            temp[winrate_cols] = temp[winrate_cols].apply(lambda x: self.percentage_to_float(x))
+            temp[winrate_cols] = temp[winrate_cols].apply(lambda x: self.percentage_float(x))
             
             new_cols = ['Class', 'Deck Name', 'Deck Code', 'Date', 'Sample Size']
             new_cols += [i for i in WR_type]
@@ -396,7 +433,8 @@ class DataProcessor:
 
         return df
 
-    def card_data_to_excel(self, date, processed = True, deck = None, class_name = None, WR_against = 'All'):
+    def card_data_to_excel(self, date, processed = True, deck = None,
+            class_name = None, WR_against = 'All'):
         '''Specify a date and a deck name, along with a variable 'processed' and create an excel file for data
             satisfying said parameters.
             

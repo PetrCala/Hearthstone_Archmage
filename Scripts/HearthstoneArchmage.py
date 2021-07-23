@@ -11,7 +11,7 @@ import PySimpleGUI as sg
 class GraphicalArchmage:
     '''Create a GUI for data extraction and exploration.
     '''
-    def __init__(self):
+    def __init__(self, driver_path = None, deck_folder = None, analysis_path = None):
         '''The constructor for the GraphicalArchmage class.
         '''
         #Defining file paths
@@ -20,9 +20,19 @@ class GraphicalArchmage:
         script_path = self.base_path + '\Scripts'
         if script_path not in sys.path:
             sys.path.insert(0, script_path)
-        self.driver_path = f'{self.base_path}\chromedriver'
-        self.deck_folder = f'{self.base_path}\Data Frames'
-        self.analysis_path = f'{self.base_path}\Analyzed' 
+
+        if driver_path == None:
+            self.driver_path = f'{self.base_path}\chromedriver'
+        else:
+            driver_path = driver_path
+        if deck_folder == None:
+            self.deck_folder = f'{self.base_path}\Data Frames'
+        else:
+            self.deck_folder = deck_folder
+        if analysis_path == None:
+            self.analysis_path = f'{self.base_path}\Data Frames\Analyzed' 
+        else:
+            self.analysis_path = analysis_path
 
         #Various tools
         self.today = datetime.date.today().strftime('%m-%d')

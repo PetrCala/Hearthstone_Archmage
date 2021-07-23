@@ -20,7 +20,7 @@ warnings.filterwarnings('ignore', category=DeprecationWarning)
 class DataExtractor:
     '''Extract data from the hsreplay.net website for either some or all archetypes in the game.
     '''
-    def __init__(self):
+    def __init__(self, driver_path = None, deck_folder = None):
         '''
         The constructor for DataExtractor class. 
         '''
@@ -30,10 +30,15 @@ class DataExtractor:
         script_path = self.base_path + '\Scripts'
         if script_path not in sys.path:
             sys.path.insert(0, script_path) 
-               
-        self.driver_path = f'{self.base_path}\chromedriver'
-        self.deck_folder = f'{self.base_path}\Data Frames'
-        self.analysis_path = f'{self.base_path}\Analyzed' 
+
+        if driver_path == None:         
+            self.driver_path = f'{self.base_path}\chromedriver'
+        else:
+            self.driver_path = driver_path
+        if deck_folder == None:
+            self.deck_folder = f'{self.base_path}\Data Frames'
+        else:
+            self.deck_folder = deck_folder
 
     def open_driver(self):
         '''Open an empty driver with the specified driver path.
