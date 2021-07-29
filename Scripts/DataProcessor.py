@@ -174,7 +174,7 @@ class DataProcessor:
             for d in data:
                 overview = d.get('Overview')
                 if WR_against == None:
-                    win_rates = overview.loc[:, 'Overall Winrate':'vs. Warlock']
+                    win_rates = overview.loc[:, 'Overall Winrate':'vs. Warrior']
                 else:
                     if 'All' in WR_against:
                         winrate_cols = ['Overall Winrate']
@@ -213,7 +213,7 @@ class DataProcessor:
         else:
             overview = data.get('Overview')
             if WR_against == None:
-                win_rates = overview.loc[:, 'Overall Winrate':'vs. Warlock']
+                win_rates = overview.loc[:, 'Overall Winrate':'vs. Warrior']
             else:
                 if 'All' in WR_against:
                     winrate_cols = ['Overall Winrate']
