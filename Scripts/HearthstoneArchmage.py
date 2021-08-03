@@ -7,6 +7,7 @@ import numpy as np
 import re
 import os
 import PySimpleGUI as sg
+import unittest
 
 class GraphicalArchmage:
     '''Create a GUI for data extraction and exploration.
@@ -741,6 +742,12 @@ class GraphicalArchmage:
                 pick_ban_w = self.open_pick_ban_w()
             
         return None
-        
-#GA = GraphicalArchmage()        
-#GA.analyze()        
+
+class Test(unittest.TestCase):
+    def test1(self):
+        self.assertEqual(sum([1,2,3]), 6, 'Should be 6')
+
+if __name__ == '__main__':
+    unittest.main()
+    #GA = GraphicalArchmage()        
+    #GA.analyze()         
