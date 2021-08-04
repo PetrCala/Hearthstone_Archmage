@@ -18,20 +18,20 @@ class GraphicalArchmage:
         #Defining file paths
         self.base_path = re.search(f'(.+)Hearthstone_Archmage', os.getcwd()).group(1)\
             + 'Hearthstone_Archmage'
-        script_path = self.base_path + '\Scripts'
+        script_path = self.base_path + '\scripts'
         if script_path not in sys.path:
             sys.path.insert(0, script_path)
 
         if driver_path == None:
-            self.driver_path = f'{self.base_path}\chromedriver'
+            self.driver_path = f'{self.base_path}\tools\chromedriver'
         else:
             driver_path = driver_path
         if deck_folder == None:
-            self.deck_folder = f'{self.base_path}\Data Frames'
+            self.deck_folder = f'{self.base_path}\data'
         else:
             self.deck_folder = deck_folder
         if analysis_path == None:
-            self.analysis_path = f'{self.base_path}\Data Frames\Analyzed' 
+            self.analysis_path = f'{self.base_path}\data\Analyzed' 
         else:
             self.analysis_path = analysis_path
 
@@ -743,11 +743,6 @@ class GraphicalArchmage:
             
         return None
 
-class Test(unittest.TestCase):
-    def test1(self):
-        self.assertEqual(sum([1,2,3]), 6, 'Should be 6')
-
 if __name__ == '__main__':
-    unittest.main()
-    #GA = GraphicalArchmage()        
-    #GA.analyze()         
+    GA = GraphicalArchmage()        
+    GA.analyze()         
