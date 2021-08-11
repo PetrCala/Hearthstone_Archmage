@@ -446,3 +446,7 @@ class DataExtractor:
         print('All done')
         
         return data_frames
+
+if __name__ == '__main__':
+    E = DataExtractor()
+    E.open_website()
