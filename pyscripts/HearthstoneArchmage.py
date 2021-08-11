@@ -17,20 +17,20 @@ class GraphicalArchmage:
         #Defining file paths
         self.base_path = re.search(f'(.+)Hearthstone_Archmage', os.getcwd()).group(1)\
             + 'Hearthstone_Archmage'
-        script_path = self.base_path + '\pyscripts'
+        script_path = self.base_path + '\\pyscripts'
         if script_path not in sys.path:
             sys.path.insert(0, script_path)
 
         if driver_path == None:
-            self.driver_path = f'{self.base_path}\tools\chromedriver'
+            self.driver_path = f'{self.base_path}\\tools\\chromedriver'
         else:
             driver_path = driver_path
         if deck_folder == None:
-            self.deck_folder = f'{self.base_path}\data'
+            self.deck_folder = f'{self.base_path}\\data'
         else:
             self.deck_folder = deck_folder
         if analysis_path == None:
-            self.analysis_path = f'{self.base_path}\data\Analyzed' 
+            self.analysis_path = f'{self.base_path}\\data\\Analyzed' 
         else:
             self.analysis_path = analysis_path
 

@@ -10,7 +10,8 @@ setup(
         'numpy>=1.14.5',
         'selenium>=3.141.0',
         'PySimpleGUI>=4.46.0',
-        'pywin32'
+        'pywin32',
+        'openpyxl>=3.0.7' #Excel opening
     ],
     setup_requires = ['pytest-runner'],
     tests_require=['pytest']

@@ -14,16 +14,16 @@ class DataProcessor:
         #Defining file paths
         self.base_path = re.search(f'(.+)Hearthstone_Archmage', os.getcwd()).group(1)\
             + 'Hearthstone_Archmage'
-        script_path = self.base_path + '\pyscripts'
+        script_path = self.base_path + '\\pyscripts'
         if script_path not in sys.path:
             sys.path.insert(0, script_path)    
 
         if deck_folder == None:
-            self.deck_folder = f'{self.base_path}\data'
+            self.deck_folder = f'{self.base_path}\\data'
         else:
             self.deck_folder = deck_folder
         if analysis_path == None:
-            self.analysis_path = f'{self.base_path}\data\Analyzed' 
+            self.analysis_path = f'{self.base_path}\\data\\Analyzed' 
         else:
             self.analysis_path = analysis_path
         
@@ -83,7 +83,7 @@ class DataProcessor:
         - deck_names (string or list): Names of decks included in loaded data. Returned either as a string
             if a single deck is analyzed, or as a list, if multiple decks are analyzed.
         '''
-        deck_folder_date = f'{self.deck_folder}/{date}'.replace('/', '\\') 
+        deck_folder_date = f'{self.deck_folder}\\{date}'
         file_paths = list()
         file_names = list()
         for (dirpath, dirnames, filenames) in os.walk(deck_folder_date):
@@ -92,6 +92,8 @@ class DataProcessor:
             
         #Load a single deck    
         if deck != None:
+            if type(deck) is not str:
+                raise TypeError('The deck name must be a single string.')
             deck = deck.title()
             file_index = file_names.index(deck)
             data = pd.read_excel(file_paths[file_index], sheet_name = None)
@@ -103,6 +105,8 @@ class DataProcessor:
         
         #Load all decks for a specified class
         elif class_name != None:
+            if type(class_name) not in [str, list]:
+                raise TypeError('The class name must be either a list or a single string.')
             if type(class_name) == list:
                 class_name = [c.title() for c in class_name]
             else:
@@ -173,14 +177,18 @@ class DataProcessor:
             deck_count = 0
             for d in data:
                 overview = d.get('Overview')
-                if WR_against == None:
+                if WR_against == None or 'All' in WR_against:
                     win_rates = overview.loc[:, 'Overall Winrate':'vs. Warrior']
                 else:
-                    if 'All' in WR_against:
-                        winrate_cols = ['Overall Winrate']
+                    if type(WR_against) not in [str, list]:
+                        raise TypeError('The opposite class must be specified either as a list or a single string.')
+                    elif type(WR_against) == str:
+                        WR_against = WR_against.title()
+                        winrate_cols = ['Overall Winrate', f'vs. {WR_against}']
                     else:
-                        winrate_cols = []
-                    winrate_cols += [f'vs. {i}' for i in WR_against if i != 'All']
+                        WR_against = [i.title() for i in WR_against]
+                        winrate_cols = ['Overall Winrate']
+                        winrate_cols += [f'vs. {i}' for i in WR_against]
                     win_rates = overview.loc[:, winrate_cols]
 
                 win_rates = win_rates.apply(lambda x: self.percentage_float(x))
@@ -212,14 +220,18 @@ class DataProcessor:
                 
         else:
             overview = data.get('Overview')
-            if WR_against == None:
+            if WR_against == None or 'All' in WR_against:
                 win_rates = overview.loc[:, 'Overall Winrate':'vs. Warrior']
             else:
-                if 'All' in WR_against:
-                    winrate_cols = ['Overall Winrate']
+                if type(WR_against) not in [str, list]:
+                    raise TypeError('The opposite class must be specified either as a list or a single string.')
+                elif type(WR_against) == str:
+                    WR_against = WR_against.title()
+                    winrate_cols = ['Overall Winrate', f'vs. {WR_against}']
                 else:
-                    winrate_cols = []
-                winrate_cols += [f'vs. {i}' for i in WR_against if i != 'All']
+                    WR_against = [i.title() for i in WR_against]
+                    winrate_cols = ['Overall Winrate']
+                    winrate_cols += [f'vs. {i}' for i in WR_against]
                 win_rates = overview.loc[:, winrate_cols]
 
             win_rates = win_rates.apply(lambda x: self.percentage_float(x))
@@ -342,10 +354,10 @@ class DataProcessor:
         data_u, data_w = self.prepare_winrates_df(date = date, deck = deck,
             class_name = class_name, WR_against = WR_against, to_percentage = to_percentage)
         if weighted == True:
-            path = f'{self.analysis_path}/Unweighted win rates.xlsx'.replace('/', '\\')
+            path = f'{self.analysis_path}\\Unweighted win rates.xlsx'
             data_u.to_excel(path, index = False)
         else:
-            path = f'{self.analysis_path}/Weighted rates.xlsx'.replace('/', '\\') 
+            path = f'{self.analysis_path}\\Weighted rates.xlsx'
             data_w.to_excel(path, index = False)
             
         return None
@@ -411,14 +423,18 @@ class DataProcessor:
                             'vs. Paladin', 'vs. Priest', 'vs. Rogue', 'vs. Shaman', 'vs. Warlock', 'vs. Warrior',
                             'Mulligan WR', 'Kept', 'Drawn WR', 'Played WR']
                             
-            if WR_against == None:
+            if WR_against == None or ('All' in WR_against):
                 WR_type = winrate_cols[:winrate_cols.index('vs. Warrior')]
             else:
-                if 'All' in WR_against:
-                    WR_type = ['Overall Winrate']
+                if type(WR_against) not in [str, list]:
+                    raise TypeError('The opposite class must be specified either as a list or a single string.')
+                elif type(WR_against) == str:
+                    WR_against = WR_against.title()
+                    WR_type = ['Overall Winrate', f'vs. {WR_against}']
                 else:
-                    WR_type = []
-                WR_type += [f'vs. {i}' for i in WR_against if i != 'All']
+                    WR_against = [i.title() for i in WR_against]
+                    WR_type = ['Overall Winrate']
+                    WR_type += [f'vs. {i}' for i in WR_against]
 
             temp[winrate_cols] = temp[winrate_cols].apply(lambda x: self.percentage_float(x))
             
@@ -434,7 +450,7 @@ class DataProcessor:
         return df
 
     def card_data_to_excel(self, date, processed = True, deck = None,
-            class_name = None, WR_against = 'All'):
+            class_name = None, WR_against = 'All', test_path = False):
         '''Specify a date and a deck name, along with a variable 'processed' and create an excel file for data
             satisfying said parameters.
             
@@ -443,7 +459,9 @@ class DataProcessor:
         - processed (bool): If true, process the data for modelling when creating the model data excel.
         - deck (str): The deck for which to create the excel file for.
         - class_name (str): Name of the class for which to create the excel file for.
-        - WR_against (str): The type of win rate which to use as a dependent variable in the models.          
+        - WR_against (str): The type of win rate which to use as a dependent variable in the models.
+        - test_path (bool): Whether or not a test should be conducted instead of creating the excel files.
+            Defaults to False.          
 
         :usage:
             self.card_data_to_excel(date = '07-01', processed = True, deck = 'Rogue - Miracle Rogue')
@@ -463,14 +481,25 @@ class DataProcessor:
         data = self.prepare_card_df(date = date, processed = processed, deck = deck, class_name = class_name,
                                         WR_against = WR_against)
 
+        #Correcting path types
+        deck_p = str(deck[0]) + ' and other'  if type(deck) == list else deck
+        class_p = str(class_name[0]) + ' and other'  if type(class_name) == list else class_name
+        WR_p = str(WR_against[0]) + ' and other' if type(WR_against) == list else WR_against 
+
+        #Testing
+        if test_path == True:
+            path = f'{self.analysis_path}\\Model data {deck_p} vs. {WR_p}.xlsx'
+            return path
+
+        #Creating the excel output
         if deck != None:
-            path = f'{self.analysis_path}/Model data {deck} vs. {WR_against}.xlsx'.replace('/', '\\') 
+            path = f'{self.analysis_path}\\Model data {deck_p} vs. {WR_p}.xlsx'
             data.to_excel(path, index = False)          
         elif class_name != None:
-            path = f'{self.analysis_path}/Model data {class_name} vs. {WR_against}.xlsx'.replace('/', '\\') 
+            path = f'{self.analysis_path}\\Model data {class_p} vs. {WR_p}.xlsx'
             data.to_excel(path, index = False)        
         else:
-            path = f'{self.analysis_path}/Model data All vs. {WR_against}.xlsx'.replace('/', '\\') 
+            path = f'{self.analysis_path}\\Model data All vs. {WR_p}.xlsx'
             data.to_excel(path, index = False)              
     
         return None

@@ -27,16 +27,16 @@ class DataExtractor:
         #Defining file paths
         self.base_path = re.search(f'(.+)Hearthstone_Archmage', os.getcwd()).group(1)\
             + 'Hearthstone_Archmage'
-        script_path = self.base_path + '\pyscripts'
+        script_path = self.base_path + '\\pyscripts'
         if script_path not in sys.path:
             sys.path.insert(0, script_path) 
 
         if driver_path == None:         
-            self.driver_path = f'{self.base_path}\tools\chromedriver'
+            self.driver_path = f'{self.base_path}\\tools\\chromedriver'
         else:
             self.driver_path = driver_path
         if deck_folder == None:
-            self.deck_folder = f'{self.base_path}\data'
+            self.deck_folder = f'{self.base_path}\\data'
         else:
             self.deck_folder = deck_folder
 
@@ -304,7 +304,7 @@ class DataExtractor:
         arch_name = arch_name.title()
         
         today = date.today().strftime("%m-%d")
-        path_partial = f'{self.deck_folder}/{today}'
+        path_partial = f'{self.deck_folder}\\{today}'
         
         #Assert the existence of a folder into which to add the data
         if not os.path.exists(path_partial):
@@ -318,7 +318,7 @@ class DataExtractor:
         sheet_n = len(df)    
 
         #Write these data frames into excel
-        path = f'{self.deck_folder}/{today}/{class_name} - {arch_name} {today}.xlsx'
+        path = f'{self.deck_folder}\\{today}\\{class_name} - {arch_name} {today}.xlsx'
         with pd.ExcelWriter(path) as writer:
              for i in range(sheet_n):
                 if i == 0:
@@ -341,7 +341,7 @@ class DataExtractor:
         - classes_skip (int): Define how many classes to skip when collecting the data.
         '''
         today = date.today().strftime("%m-%d")
-        path_partial = f'{self.deck_folder}/{today}'
+        path_partial = f'{self.deck_folder}\\{today}'
 
         #Assert the existence of a folder into which to add the data
         if not os.path.exists(path_partial):
@@ -431,7 +431,7 @@ class DataExtractor:
                 sheet_n = len(data_frames)    
 
                 #Write these data frames into excel
-                path = f'{path_partial}/{class_name} - {arch_name} {today}.xlsx'
+                path = f'{path_partial}\\{class_name} - {arch_name} {today}.xlsx'
                 with pd.ExcelWriter(path) as writer:
                      for i in range(sheet_n):
                         if i == 0:
