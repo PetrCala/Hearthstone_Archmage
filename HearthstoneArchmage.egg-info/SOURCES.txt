@@ -1,0 +1,13 @@
+README.md
+setup.py
+HearthstoneArchmage.egg-info/PKG-INFO
+HearthstoneArchmage.egg-info/SOURCES.txt
+HearthstoneArchmage.egg-info/dependency_links.txt
+HearthstoneArchmage.egg-info/requires.txt
+HearthstoneArchmage.egg-info/top_level.txt
+pyscripts/Browser_START_HERE_Demo_Programs_Browser.py
+pyscripts/DataExtractor.py
+pyscripts/DataProcessor.py
+pyscripts/HearthstoneArchmage.py
+pyscripts/__init__.py
+pyscripts/delete_later.py
