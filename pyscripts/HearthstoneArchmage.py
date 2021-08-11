@@ -7,7 +7,6 @@ import numpy as np
 import re
 import os
 import PySimpleGUI as sg
-import unittest
 
 class GraphicalArchmage:
     '''Create a GUI for data extraction and exploration.
@@ -558,7 +557,7 @@ class GraphicalArchmage:
                 return temp                 
     
     #The main method
-    def analyze(self):  
+    def main(self):  
         '''The main method for generating the GUI. Return None.
 
         Returns:
@@ -745,4 +744,4 @@ class GraphicalArchmage:
 
 if __name__ == '__main__':
     GA = GraphicalArchmage()        
-    GA.analyze()         
+    GA.main()         
