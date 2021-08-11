@@ -17,20 +17,20 @@ class GraphicalArchmage:
         #Defining file paths
         self.base_path = re.search(f'(.+)Hearthstone_Archmage', os.getcwd()).group(1)\
             + 'Hearthstone_Archmage'
-        script_path = self.base_path + '\scripts'
+        script_path = self.base_path + '\Scripts'
         if script_path not in sys.path:
             sys.path.insert(0, script_path)
 
         if driver_path == None:
-            self.driver_path = f'{self.base_path}\tools\chromedriver'
+            self.driver_path = f'{self.base_path}\chromedriver'
         else:
             driver_path = driver_path
         if deck_folder == None:
-            self.deck_folder = f'{self.base_path}\data'
+            self.deck_folder = f'{self.base_path}\Data Frames'
         else:
             self.deck_folder = deck_folder
         if analysis_path == None:
-            self.analysis_path = f'{self.base_path}\data\Analyzed' 
+            self.analysis_path = f'{self.base_path}\Data Frames\Analyzed' 
         else:
             self.analysis_path = analysis_path
 
@@ -309,16 +309,23 @@ class GraphicalArchmage:
              sg.Button('Select', size = (7,1), key = '-CAL-DATE-')]], 
                                     title = '')]],justification = 'left')
         
-        #Output and the technical column
-        col6 = sg.Column([[sg.Frame(layout = [
-            [sg.Text('Data Exploration')],
-            [sg.Output(size = (100,21), background_color = 'White')],
-            [sg.Column([[sg.Button('Explore', size = (6,1), key = '-EXPLORE-PERF-RUN-')]], justification = 'right')]],
-                                    title = '')]],justification = 'left')
-        
-        col7 = sg.Column([[sg.Text('', size = (100, 15))]], justification = 'left')
-             
-            
+        #Data preview, output and the technical column
+        col6 = sg.Column([[sg.Table(values = '', headings = ['Deck Name', 'Overall Winrate']\
+             + list(map('vs. '.__add__,self.class_names_list[1:])),
+            auto_size_columns = False, max_col_width = 50,
+            vertical_scroll_only = False, text_color = 'White',
+            background_color = '#297ab5', alternating_row_color = '#3a86bc', 
+            justification = 'center', size = (100,26),
+            key = '-TABLE1-')],
+            [sg.Column([
+                [sg.Button('Explore', size = (6,1), key = '-EXPLORE-PERF-RUN-'),
+                 sg.Button('To Excel', size = (7,1), key = '-EXPLORE-TO-EXCEL-')]],
+                    justification = 'right')]], justification = 'left')
+
+        col7 = sg.Column([[sg.Frame(layout = [
+            [sg.Output(size = (100,8), background_color = 'White')]
+            ],title = 'Output')]], justification = 'left')
+    
         tech_col = sg.Column(
             [[sg.Text('',size = (65,1)),
              sg.Button('Settings', key = '-SETTINGS-'),
@@ -439,7 +446,7 @@ class GraphicalArchmage:
 
     #Methods for the Get Data window
     def run_extraction(self, driver_path, deck_folder, class_name = None, extract_arch = False,
-                        archetype_name = None, minimized = False):
+                        archetype_name = None):
         '''Specify the driver path, the folder for storing data and optionally a class name,
         whether an archetype should be extracted, what its name should be and whether
         this extraction should run minimized and extract data for these parameters.
@@ -453,18 +460,16 @@ class GraphicalArchmage:
                 used in the data extraction. Defaults to False.
             archetype_name (str, optional): Name of the archetype for which
                 to extract the data. Defaults to None.
-            minimized (bool, optional): If true, the extraction will run minimized.
-                Defaults to False. Setting to True is deprecated.
 
         Usage:
             self.run_extraction(driver_path, deck_folder, class_name = 'Rogue',
-                extract_arch = False, archetype_name = None, minimized = False)
+                extract_arch = False, archetype_name = None)
 
         Returns:
             None: Extracts the data from hsreplay.net.
         '''
         from DataExtractor import DataExtractor
-        DE = DataExtractor(driver_path, deck_folder, minimized)
+        DE = DataExtractor(driver_path = driver_path, deck_folder = deck_folder)
         if extract_arch == True:
             if archetype_name in [None, '']:
                 return 'Please specify the archetype name if you wish to extract archetype data.'
@@ -525,7 +530,7 @@ class GraphicalArchmage:
             return 'Please select the correct type of exploration - Win Rate (WR) \
             or Card Performance (CP).'
         from DataProcessor import DataProcessor
-        DP = DataProcessor(deck_folder, analysis_path)
+        DP = DataProcessor(deck_folder = deck_folder, analysis_path = analysis_path)
         folder_date = f'{deck_folder}\{analysis_date}'
         if not os.path.exists(folder_date):
             return f'There is no data avilable for date {analysis_date}.'
@@ -535,12 +540,12 @@ class GraphicalArchmage:
                     return 'Please specify the archetype name if you wish to extract archetype data.'
                 else:
                     temp = DP.prepare_winrates_df(date = analysis_date, deck = archetype_name,
-                        WR_against = class_against)
+                        WR_against = class_against, to_percentage = True)
                     return temp[0]
             elif extract_arch_de == False:
                 archetype_name = None
                 temp = DP.prepare_winrates_df(date = analysis_date, deck = archetype_name,
-                    class_name = class_for, WR_against = class_against)
+                    class_name = class_for, WR_against = class_against, to_percentage = True)
                 return temp[0]
         elif explore == 'CP':
             if extract_arch_de == True:
@@ -556,6 +561,33 @@ class GraphicalArchmage:
                         class_name = class_for, WR_against = class_against)
                 return temp                 
     
+    def complete_dataset(self, data, forward = True):
+        '''Input a pandas data frame and either add empty columns for missing classes, or remove these
+        empty columns depending on the variable 'forward'.
+
+        Args:
+            data (pd.DataFrame): The data frame for which to conduct the operation.
+            forward (bool, optional): If True, empty columns will be added for missing classes.
+                Defaults to True.
+
+        Returns:
+            data (pd.DataFrame): The edited data frame.
+        '''
+        classes_list = self.class_names_list[1:]        
+        if forward == True:           
+            data[f'Overall Winrate'] = pd.Series(np.repeat("", data.shape[0])) if f'Overall Winrate' not in data.columns else data[f'Overall Winrate']
+            for c in classes_list:
+                data[f'vs. {c}'] = pd.Series(np.repeat("", data.shape[0])) if f'vs. {c}' not in data.columns else data[f'vs. {c}']
+            column_names = ['Deck Name', 'Overall Winrate'] + list(map('vs. '.__add__,classes_list))
+            data = data[column_names]
+        else:
+            del_cols = []
+            drop_list = ['Overall Winrate'] + list(map('vs. '.__add__,classes_list))
+            del_cols += [c for c in drop_list if sum(data[f'{c}'] == "") == len(data)]
+            data = data.drop(del_cols, axis = 1)
+        
+        return data
+
     #The main method
     def main(self):  
         '''The main method for generating the GUI. Return None.
@@ -567,7 +599,7 @@ class GraphicalArchmage:
 
         while True:
             window, event, values = sg.read_all_windows()
-            print(event)
+            #print(event)
             #print(values)
             
             #Window closure
@@ -726,10 +758,35 @@ class GraphicalArchmage:
                     elif values['-CLASS-CP-'] == True or values['-ARCH-CP-'] == True:
                         explore = 'CP'
 
-                    temp_data = self.explore_performance(explore, deck_folder,
+                    exp_data = self.explore_performance(explore, deck_folder,
                     analysis_path, analysis_date, extract_arch_de, class_for,
                     class_against, archetype_name)
-                    print(temp_data)
+
+                    if type(exp_data) == str:
+                        print(exp_data)
+                    elif type(exp_data) == pd.core.frame.DataFrame:
+                        exp_data = self.complete_dataset(exp_data, forward = True)
+                        new_values = exp_data.values.tolist()
+                        window['-TABLE1-'].update(values = new_values)
+                        exp_data = self.complete_dataset(exp_data, forward = False)
+            
+            elif event == '-EXPLORE-TO-EXCEL-':
+                try:
+                    analysis_path
+                except:
+                    analysis_path = self.analysis_path
+                try:
+                    exp_data
+                except:
+                    print('Please generate the data you want to export first.')
+                else:
+                    name = sg.popup_get_text(message = 'Name of the file:',
+                        title = 'Select Name')
+                    path = f'{analysis_path}/{name}.xlsx'.replace('/', '\\')
+                    exp_data.to_excel(path, index = False)
+                    sg.popup(f'All done!\nYour file is stored under the name\
+                        {name} in the output folder.', title = 'Done')
+
             #Extra window opening
             elif event == '-GET-DATA-'and get_data_w == None:
                 get_data_w = self.open_get_data_w()

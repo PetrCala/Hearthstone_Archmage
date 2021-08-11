@@ -4,8 +4,11 @@ from pyscripts import HearthstoneArchmage
 H = HearthstoneArchmage.GraphicalArchmage()
 
 class test_Analyzers(unittest.TestCase):
-    def test1(self):
-        self.assertEqual(sum([1,2,3]), 6, 'Should be 6')
+    def test_generate_class_elements(self):
+        temp = H.generate_class_elements(el_type = 'Checkbox',
+            key_tag = 'DE', group_tag = 'de_sel_1', size = (10,1),
+            enable_events = False, start = 1, end = 10) 
+        self.assertEqual(type(temp), list, 'Should be a list')
 
 if __name__ == '__main__':
     unittest.main()
