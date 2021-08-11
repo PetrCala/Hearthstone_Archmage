@@ -27,7 +27,7 @@ class DataExtractor:
         #Defining file paths
         self.base_path = re.search(f'(.+)Hearthstone_Archmage', os.getcwd()).group(1)\
             + 'Hearthstone_Archmage'
-        script_path = self.base_path + '\scripts'
+        script_path = self.base_path + '\pyscripts'
         if script_path not in sys.path:
             sys.path.insert(0, script_path) 
 
